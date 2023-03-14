@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 
 namespace ReverseBinaryFile
@@ -7,38 +8,75 @@ namespace ReverseBinaryFile
     {
         static void Main(string[] args)
         {
-            int bytesToRead = 32768;
-            string inputFileName = args[0];
-            string outputFileName = args[1];
-
-            BinaryReader reader = new BinaryReader(File.Open(inputFileName, FileMode.Open));
-            BinaryWriter writer = new BinaryWriter(File.Open(outputFileName, FileMode.Create));
-
-            byte[] buffer;
-            long numBytes = new FileInfo(inputFileName).Length;
-            long bytesRead = 0;
-            long readOffset = bytesToRead;
-            while (bytesRead < numBytes)
+            try
             {
-                if (readOffset <= numBytes)
+                Stopwatch stopwatch = new Stopwatch();
+                stopwatch.Start();
+
+                string inputFileName = args[0];
+                string outputFileName = args[1];
+                Stream reader = File.Open(inputFileName, FileMode.Open);
+                Stream writer = File.Open(outputFileName, FileMode.Create);
+
+                byte[] buffer = new byte[8192];
+                int read;
+
+                writer.SetLength(reader.Length);
+                writer.Seek(0, SeekOrigin.End);
+                while ((read = reader.Read(buffer, 0, buffer.Length)) > 0)
                 {
-                    reader.BaseStream.Seek(-readOffset, SeekOrigin.End);
-                    buffer = reader.ReadBytes(bytesToRead);
-                    bytesRead += buffer.Length;
-                    readOffset += buffer.Length;
+                    writer.Seek(-read, SeekOrigin.Current);
+                    Array.Reverse(buffer);
+                    if (read == buffer.Length)
+                    {
+                        writer.Write(buffer, 0, read);
+                    }
+                    else
+                    {
+                        writer.Write(buffer, buffer.Length - read, read);
+                    }
+                    writer.Seek(-read, SeekOrigin.Current);
+                    Console.Write("\r" + (int)((float)reader.Position / (float)reader.Length * 100) + "% | " + stopwatch.Elapsed);
                 }
-                else
-                {
-                    reader.BaseStream.Seek(0, SeekOrigin.Begin);
-                    buffer = reader.ReadBytes((int)(numBytes - bytesRead));
-                    bytesRead += buffer.Length;
-                }
-                Array.Reverse(buffer);
-                writer.BaseStream.Seek(0, SeekOrigin.End);
-                writer.Write(buffer);
-                Console.Write("\r" + bytesRead + " / " + numBytes + " bytes");
+                reader.Close();
+                writer.Close();
+                reader.Dispose();
+                writer.Dispose();
+                stopwatch.Stop();
+                Console.Write("\r" + "Done | " + stopwatch.Elapsed);
             }
-            Console.WriteLine("Done");
+            catch (ArgumentException)
+            {
+                Console.WriteLine("\r" + "File name is zero-length, contains only spaces, or contains one or more invalid characters");
+            }
+            catch (PathTooLongException)
+            {
+                Console.WriteLine("\r" + "The specified path, filename, or both, exceeds the system's maximum length");
+            }
+            catch (DirectoryNotFoundException)
+            {
+                Console.WriteLine("\r" + "Invalid path specified");
+            }
+            catch (IOException)
+            {
+                Console.WriteLine("\r" + "An I/O error occurred");
+            }
+            catch (UnauthorizedAccessException)
+            {
+                Console.WriteLine("\r" + "Unauthorized access error occurred while opening the file");
+            }
+            catch (NotSupportedException)
+            {
+                Console.WriteLine("\r" + "The filename is in an invalid format");
+            }
+            catch (IndexOutOfRangeException)
+            {
+                Console.WriteLine("\r" + "File name was not specified");
+            }
+            catch(Exception)
+            {
+                Console.WriteLine("\r" + "Error");
+            }
         }
     }
 }
