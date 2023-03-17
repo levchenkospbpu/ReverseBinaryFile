@@ -3,5 +3,3 @@ A console application that receives a binary file of arbitrary size as input and
 program.exe input.dat output.dat
 
 For example, if the input file is input.dat which contains the bytes {0x0A, 0x00, 0x20, 0xFF}, then the output will be the file output.dat which contains the bytes {0xFF, 0x20, 0x00, 0x0A}.
-
-The time complexity is O(n) and the space complexity is O(1).
